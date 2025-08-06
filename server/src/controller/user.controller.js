@@ -136,4 +136,47 @@ const loginUser = asyncHandler(async(req, res)=>{
     )
 })
 
-export { registerUser, loginUser }
+const logoutUser = asyncHandler(async(req, res)=>{
+    //so first it is secure route.
+    // so first find out the user based on from its id 
+    // clear the refresh token from its document
+    // and clear the cookie.
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $unset:{
+                refreshToken: 1 //unset the refresh token in user document
+            }
+        },
+        {
+            new: true
+        }
+    )
+
+    return res
+    .status(202)
+    .clearCookie("accessToken",options)
+    .clearCookie("refreshToken",options)
+    .json(new ApiResponse(202,{},"User logged out successfully"))
+
+})
+
+const getCurrentUser = asyncHandler(async(req, res)=>{
+    const user = await User.findById(req.user._id).select("-password -refreshToken");
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,{
+            user
+        })
+    )
+})
+
+export { 
+    registerUser, 
+    loginUser,
+    logoutUser,
+    getCurrentUser
+ }
