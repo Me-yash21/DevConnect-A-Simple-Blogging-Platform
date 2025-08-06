@@ -1,7 +1,8 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import errorHandler from './middleware/errorHandler.middleware.js';
-import e from 'express';
+import upload from './middleware/multer.middleware.js';
+import fs from 'fs'
 
 const app = express();
 
