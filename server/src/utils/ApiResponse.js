@@ -1,4 +1,4 @@
-export class ApiResponse {
+class ApiResponse {
     constructor(statusCode, data, message = '', success = true) {
         this.statusCode = statusCode;
         this.data = data || {}; // Ensure data is always an object
@@ -6,3 +6,5 @@ export class ApiResponse {
         this.success = success;
     }
 }   
+
+export {ApiResponse}
