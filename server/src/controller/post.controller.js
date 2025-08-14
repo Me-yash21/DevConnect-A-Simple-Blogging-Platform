@@ -91,7 +91,103 @@ const getAllPost = asyncHandler(async (req, res)=>{
     ))
 })
 
+const getPostById = asyncHandler(async(req,res)=>{
+
+    const {id} = req.params ;
+    if(!id){
+        throw new ApiError(400,"video Id is required.")
+    }
+
+    const post = await Post.aggregate([
+        {
+            $match: {
+                _id: id
+            }
+        },
+        {
+            $lookup:{
+                from:'users',
+                localField:'author',
+                foreignField:'_id',
+                pipeline:[
+                    {
+                        $project:{
+                            fullName:1,
+                            username:1,
+                            avatar:1
+                        }
+                    }
+                ],
+                as:'author_detail'
+            }
+        },
+        {
+            $lookup:{
+                from:'likes',
+                localField:'_id',
+                foreignField:'postId',
+                as:"likes"
+            }
+        },
+        {
+            $addFields:{
+                likeUsersId:{
+                    $map:{
+                        input:'$likes',
+                        as:'like',
+                        in:{
+                            $toString: "$$like.userId"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $addFields:{
+                likesCount:{
+                    $size:'$likes'
+                },
+                isLiked:{
+                    $cond:{
+                        if:{$in:[req.user?._id,likeUsersId]},
+                        then: true,
+                        else:false
+                    }
+                }
+            }
+        },
+        {
+            $project:{
+                title: 1,
+                content: 1,
+                author_detail: 1,
+                tags: 1,
+                coverImage: 1,
+                likesCount: 1,
+                isLiked: 1
+            }
+        }
+    ])
+
+    if(!post){
+        throw new ApiError(404,"invaild post id , post not found.")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        post,
+        "post fetched successfully."
+    ))
+})
+
+const updatePost = asyncHandler(async(req, res)=>{
+
+
+})
 export {
     createPost,
-    getAllPost
+    getAllPost,
+    getPostById
 }
