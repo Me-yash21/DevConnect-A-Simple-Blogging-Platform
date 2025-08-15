@@ -2,7 +2,7 @@ import { Post } from '../model/post.model.js'
 import {ApiError} from '../utils/ApiError.js'
 import {ApiResponse} from '../utils/ApiResponse.js'
 import {asyncHandler} from '../utils/asynHandler.js'
-import {uploadOnCloudinary} from '../utils/cloudinary.js'
+import {uploadOnCloudinary, deleteFromCloudiary} from '../utils/cloudinary.js'
 
 const createPost = asyncHandler(async(req, res)=>{
 
@@ -184,10 +184,98 @@ const getPostById = asyncHandler(async(req,res)=>{
 
 const updatePost = asyncHandler(async(req, res)=>{
 
+    const {id} = req.params;
+    if(!id){
+        throw new ApiError(400,"Post Id is required.")
+    }
+
+    const title = req.body.title?.trim();
+    const content = req.body.content?.trim();
+    const tags = JSON.parse(req.body.tags);
+    
+    const coverImageLocalPath = req.file;
+  
+    //* check that at least one field is valid or not empty or not undefined
+    if(!title && !content && !coverImageLocalPath && !(tags?.toString())){
+        throw new ApiError(400,"At least one field is required")
+    }
+
+    //function to upload new cover image and delete previous coverImage on cloudinary.
+    async function updateCoverImageOnCloudinary(coverImageLocalPath,previousCoverImageUrl){
+        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+        if(!coverImage){
+            throw new ApiError(500,"something went wrong while uploading the file.")
+        }
+
+        const deleteCoverImage = await deleteFromCloudiary(previousCoverImageUrl);
+
+        return coverImage;
+    }
+
+    if(title || content || tags.length){
+        const post = await Post.findByIdAndUpdate(id,
+            {
+                $set:{
+                    title,
+                    content,
+                    tags
+                }
+            },
+            {
+                new:true
+            }
+        )
+
+        if(!post){
+            throw new ApiError(400,"Post Id is invaild.")
+        }
+
+        if(coverImageLocalPath){
+            //if there is coverImage then delete previous image and updater with new one.
+            const newCoverImage = await updateCoverImageOnCloudinary(coverImageLocalPath, post.coverImage);
+
+            post.coverImage = newCoverImage.secure_url;
+            await post.save({validateBeforeSave:false});
+            // Post.save() return the updated document and also modify the original document. It modifies and returns the same document instance
+
+        }
+
+        return res
+        .status(200)
+        .json(new ApiResponse(
+            200,
+            post,
+            "post updated successfully."
+        ))
+    }
+    else if(coverImageLocalPath){
+        const post = await Post.findById(id);
+
+        if(!post){
+            throw new ApiError(400,"Post Id is invalid.")
+        }
+
+        const newCoverImage = await updateCoverImageOnCloudinary(coverImageLocalPath,post.coverImage);
+
+        post.coverImage = newCoverImage.secure_url;
+        await post.save({validateBeforeSave:false});
+
+        return res
+        .status(200)
+        .json(new ApiResponse(
+            200,
+            post,
+            "post coverImage updated successfully."
+        ))
+    }
 
 })
+
+
 export {
     createPost,
     getAllPost,
-    getPostById
+    getPostById,
+    updatePost
 }
