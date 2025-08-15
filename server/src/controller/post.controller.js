@@ -272,10 +272,62 @@ const updatePost = asyncHandler(async(req, res)=>{
 
 })
 
+const deletePost = asyncHandler(async(req, res)=>{
+
+    const {id} = req.params;
+
+    if(!id){
+        throw new ApiError(400,"Post Id is required.")
+    }
+
+    /*
+    const post = await Post.findById(id)
+
+    if(!post){
+        throw new ApiError(400,"Post Id is Invalid")
+    }
+
+    // delete the coverimage from the cloudinary.
+    const deleteImageResult = await deleteFromCloudiary(post.coverImage);
+    if(!deleteImageResult){
+        throw new ApiError(500,"sometings went wrong while deleting the coverImage.")
+    }
+
+    //delete the post document from the database
+    const deletePostResult = await Post.deleteOne({
+        _id: post._id
+    })
+
+    if(!(deletePostResult.deletedCount)){
+        throw new ApiError(500,"Post not deleted.")
+    }
+    */
+
+    const post = await Post.findByIdAndDelete(id)
+    //* model.findByIdAndDelete() returns the document before deletion.
+
+    if(!post){
+        throw new ApiError(400,"invalid Post Id");
+    }
+
+    const deleteImageResult = await(deleteFromCloudiary(post.coverImage));
+    if(!deleteImageResult){
+        throw new ApiError(500,"sometings went wrong while deleting the coverImage.")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        {},
+        "Post deleted successfully"
+    ))
+})
 
 export {
     createPost,
     getAllPost,
     getPostById,
-    updatePost
+    updatePost,
+    deletePost
 }
